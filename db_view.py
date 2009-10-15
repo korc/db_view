@@ -12,9 +12,9 @@ sys.path.append(os.path.join(os.path.dirname(__file__),'..','lib'))
 
 import re,traceback,locale
 import gtk,gobject
-import gtkutil,sqllib
-try: import korcutil as util
-except ImportError: import util
+
+import krutils.misc,krutils.gtk
+from krutils import sql as sqllib
 
 def short_str(s,maxsize=15):
 	if s is None: return ''
@@ -50,7 +50,7 @@ class Selection(object):
 
 class NoKeysError(Exception): pass
 
-class StatementInfo(util.DynAttrClass):
+class StatementInfo(krutils.misc.DynAttrClass):
 	search_re=re.compile(r'^\s*(?P<statement>select)\s+(?P<oid>OID,)?.+?from\s+(?P<table>\w+).*',re.I|re.S)
 	_defaults=dict(table=None,store=None,sql=None,has_oids=False,is_new=True,is_select=False)
 	__slots__=_defaults.keys()+['cols','colidx','coltypes']
@@ -101,7 +101,7 @@ class UI(object):
 		gladepath=os.path.join(os.path.dirname(sys.argv[0]),'db_view.glade')
 		try: gladepath=unicode(gladepath,locale.getdefaultlocale()[1])
 		except Exception: pass
-		self.ui=gtkutil.GladeUI(gladepath,self)
+		self.ui=krutils.gtk.GladeUI(gladepath,self)
 
 		try: self.ui.mainwindow.set_icon_from_file(os.path.join(mypath,'db_view.svg'))
 		except gobject.GError,e:
