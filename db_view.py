@@ -5,16 +5,16 @@ import sys,os
 try: mypath=os.path.dirname(__file__)
 except NameError: mypath=os.path.dirname(sys.argv[0])
 
-version=(0,8,3,20091015)
+version=(0,8,3,20091126)
 
 sys.path.append(os.path.join(os.path.dirname(__file__),'lib'))
 sys.path.append(os.path.join(os.path.dirname(__file__),'..','lib'))
 
 import re,traceback,locale
 import gtk,gobject
-import gtkutil,sqllib
-try: import korcutil as util
-except ImportError: import util
+
+import krutils.misc,krutils.gtkutil
+from krutils import sql as sqllib
 
 def short_str(s,maxsize=15):
 	if s is None: return ''
@@ -50,7 +50,7 @@ class Selection(object):
 
 class NoKeysError(Exception): pass
 
-class StatementInfo(util.DynAttrClass):
+class StatementInfo(krutils.misc.DynAttrClass):
 	search_re=re.compile(r'^\s*(?P<statement>select)\s+(?P<oid>OID,)?.+?from\s+(?P<table>\w+).*',re.I|re.S)
 	_defaults=dict(table=None,store=None,sql=None,has_oids=False,is_new=True,is_select=False)
 	__slots__=_defaults.keys()+['cols','colidx','coltypes']
@@ -101,7 +101,7 @@ class UI(object):
 		gladepath=os.path.join(os.path.dirname(sys.argv[0]),'db_view.glade')
 		try: gladepath=unicode(gladepath,locale.getdefaultlocale()[1])
 		except Exception: pass
-		self.ui=gtkutil.GladeUI(gladepath,self)
+		self.ui=krutils.gtkutil.GladeUI(gladepath,self)
 
 		try: self.ui.mainwindow.set_icon_from_file(os.path.join(mypath,'db_view.svg'))
 		except gobject.GError,e:
@@ -256,7 +256,7 @@ class UI(object):
 		#print "render_data:",(column,cell,model,iter,idx)
 		value=model.get_value(iter,idx)
 		if value is not None:
-			cell.set_property('text',str(value))
+			cell.set_property('text',str(value) if str(value).count("\n")<5 else "%s ..."%(value[:100],))
 		else:
 			cell.set_property('markup','<span foreground="#808080" size="smaller" style="italic">null</span>')
 
@@ -456,7 +456,9 @@ class UI(object):
 	def on_choose_table(self,treeview,path,column):
 		if self.ui.limitbtn.get_active(): limitstr=' limit 30'
 		else: limitstr=''
-		sql='select %s* from %s%s'%(self.dbconn.api.oidstr,self.tablestore[path][0],limitstr)
+		tblname=self.tablestore[path][0]
+		if '-' in tblname: tblname='`%s`'%tblname
+		sql='select %s* from %s%s'%(self.dbconn.api.oidstr,tblname,limitstr)
 		self.ui.sqlquery.set_text(sql)
 		self.ui.sqlquery.activate()
 		self.on_addbtn_toggled()
