@@ -5,7 +5,7 @@ import sys,os
 try: mypath=os.path.dirname(__file__)
 except NameError: mypath=os.path.dirname(sys.argv[0])
 
-version=(0,8,3,20091126)
+version=(0,8,3,20100311)
 
 sys.path.append(os.path.join(os.path.dirname(__file__),'lib'))
 sys.path.append(os.path.join(os.path.dirname(__file__),'..','lib'))
@@ -13,8 +13,9 @@ sys.path.append(os.path.join(os.path.dirname(__file__),'..','lib'))
 import re,traceback,locale
 import gtk,gobject
 
-import krutils.misc,krutils.gtkutil
-from krutils import sql as sqllib
+from krutils.misc import DynAttrClass
+from krutils.gtkutil import GtkBuilderHelper
+import krutils.sql as sqllib
 
 def short_str(s,maxsize=15):
 	if s is None: return ''
@@ -50,7 +51,7 @@ class Selection(object):
 
 class NoKeysError(Exception): pass
 
-class StatementInfo(krutils.misc.DynAttrClass):
+class StatementInfo(DynAttrClass):
 	search_re=re.compile(r'^\s*(?P<statement>select)\s+(?P<oid>OID,)?.+?from\s+(?P<table>\w+).*',re.I|re.S)
 	_defaults=dict(table=None,store=None,sql=None,has_oids=False,is_new=True,is_select=False)
 	__slots__=_defaults.keys()+['cols','colidx','coltypes']
@@ -98,10 +99,10 @@ class UI(object):
 
 
 	def __init__(self,fname=''):
-		gladepath=os.path.join(os.path.dirname(sys.argv[0]),'db_view.glade')
-		try: gladepath=unicode(gladepath,locale.getdefaultlocale()[1])
+		uipath=os.path.join(os.path.dirname(sys.argv[0]),'db_view.ui')
+		try: uipath=unicode(uipath,locale.getdefaultlocale()[1])
 		except Exception: pass
-		self.ui=krutils.gtkutil.GladeUI(gladepath,self)
+		self.ui=GtkBuilderHelper(uipath,self)
 
 		try: self.ui.mainwindow.set_icon_from_file(os.path.join(mypath,'db_view.svg'))
 		except gobject.GError,e:
@@ -545,7 +546,7 @@ class UI(object):
 			print 'Error loading %r'%(dbname)
 			raise
 		else:
-			print "Loaded: %r via %r"%(dbname,self.selected_api)
+			#print "Loaded: %r via %r"%(dbname,self.selected_api)
 
 			if self.ui.dbnameentry.get_text()!=dbname:
 				self.ui.dbnameentry.set_text(dbname)
@@ -558,8 +559,7 @@ class UI(object):
 		self.refresh_view()
 	def on_fchooser(self,fchooser):
 		fname=fchooser.get_filename()
-		if fname is not None:
-			print 'File chosen:',fname
+		#if fname is not None: print 'File chosen:',fname
 		if type(fname)==str and not (fname==self.current_dbname) and os.path.isfile(fname):
 			self.load_db(fname)
 			self.ui.mainwindow.set_title(os.path.basename(fname))
