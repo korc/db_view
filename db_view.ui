@@ -2,6 +2,14 @@
 <interface>
   <requires lib="gtk+" version="2.16"/>
   <!-- interface-naming-policy toplevel-contextual -->
+  <object class="GtkListStore" id="defviews_store">
+    <columns>
+      <!-- column-name name -->
+      <column type="gchararray"/>
+      <!-- column-name definition -->
+      <column type="gchararray"/>
+    </columns>
+  </object>
   <object class="GtkWindow" id="mainwindow">
     <property name="visible">True</property>
     <property name="title" translatable="yes">Data viewer</property>
@@ -80,18 +88,55 @@
             <property name="visible">True</property>
             <property name="can_focus">True</property>
             <child>
-              <object class="GtkScrolledWindow" id="scrolledwindow1">
+              <object class="GtkHBox" id="hbox4">
                 <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="hscrollbar_policy">automatic</property>
-                <property name="vscrollbar_policy">automatic</property>
-                <property name="shadow_type">in</property>
                 <child>
-                  <object class="GtkTreeView" id="tablesview">
+                  <object class="GtkScrolledWindow" id="tables_scwin">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
-                    <signal name="row_activated" handler="on_choose_table"/>
+                    <property name="hscrollbar_policy">automatic</property>
+                    <property name="vscrollbar_policy">automatic</property>
+                    <child>
+                      <object class="GtkTreeView" id="tablesview">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <signal name="row_activated" handler="on_choose_table"/>
+                      </object>
+                    </child>
                   </object>
+                  <packing>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkScrolledWindow" id="views_scwin">
+                    <property name="can_focus">True</property>
+                    <property name="hscrollbar_policy">automatic</property>
+                    <property name="vscrollbar_policy">automatic</property>
+                    <child>
+                      <object class="GtkTreeView" id="defviews_view">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="model">defviews_store</property>
+                        <property name="search_column">0</property>
+                        <signal name="row_activated" handler="on_defview"/>
+                        <child>
+                          <object class="GtkTreeViewColumn" id="viewname_col">
+                            <property name="title">View</property>
+                            <child>
+                              <object class="GtkCellRendererText" id="cellrenderertext1"/>
+                              <attributes>
+                                <attribute name="text">0</attribute>
+                              </attributes>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="position">1</property>
+                  </packing>
                 </child>
               </object>
               <packing>
@@ -104,7 +149,7 @@
                 <property name="visible">True</property>
                 <property name="orientation">vertical</property>
                 <child>
-                  <object class="GtkHBox" id="hbox2">
+                  <object class="GtkHBox" id="sql_hbox">
                     <property name="visible">True</property>
                     <child>
                       <object class="GtkToggleButton" id="addbtn">
@@ -240,6 +285,25 @@
                   </packing>
                 </child>
                 <child>
+                  <object class="GtkHBox" id="view_conf">
+                    <property name="visible">True</property>
+                    <child>
+                      <placeholder/>
+                    </child>
+                    <child>
+                      <placeholder/>
+                    </child>
+                    <child>
+                      <placeholder/>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
+                    <property name="position">2</property>
+                  </packing>
+                </child>
+                <child>
                   <object class="GtkHBox" id="errorbox">
                     <child>
                       <object class="GtkImage" id="image1">
@@ -270,7 +334,7 @@
                   <packing>
                     <property name="expand">False</property>
                     <property name="fill">False</property>
-                    <property name="position">2</property>
+                    <property name="position">3</property>
                   </packing>
                 </child>
                 <child>
@@ -318,7 +382,7 @@
                   <packing>
                     <property name="expand">False</property>
                     <property name="fill">False</property>
-                    <property name="position">3</property>
+                    <property name="position">4</property>
                   </packing>
                 </child>
                 <child>
@@ -337,7 +401,7 @@
                     </child>
                   </object>
                   <packing>
-                    <property name="position">4</property>
+                    <property name="position">5</property>
                   </packing>
                 </child>
                 <child>
@@ -345,7 +409,7 @@
                     <property name="can_focus">True</property>
                   </object>
                   <packing>
-                    <property name="position">5</property>
+                    <property name="position">6</property>
                   </packing>
                 </child>
               </object>
@@ -362,6 +426,23 @@
         <child>
           <object class="GtkStatusbar" id="statusbar">
             <property name="visible">True</property>
+            <child>
+              <object class="GtkCheckButton" id="raw_btn">
+                <property name="label" translatable="yes">Ra_w view</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">False</property>
+                <property name="use_underline">True</property>
+                <property name="active">True</property>
+                <property name="draw_indicator">True</property>
+                <signal name="toggled" handler="on_raw_btn"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
           </object>
           <packing>
             <property name="expand">False</property>

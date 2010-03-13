@@ -5,7 +5,7 @@ import sys,os
 try: mypath=os.path.dirname(__file__)
 except NameError: mypath=os.path.dirname(sys.argv[0])
 
-version=(0,8,3,20100311)
+version=(0,8,3,20100313)
 
 sys.path.append(os.path.join(os.path.dirname(__file__),'lib'))
 sys.path.append(os.path.join(os.path.dirname(__file__),'..','lib'))
@@ -13,7 +13,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__),'..','lib'))
 import re,traceback,locale
 import gtk,gobject
 
-from krutils.misc import DynAttrClass
+from krutils.misc import DynAttrClass,Connectable
 from krutils.gtkutil import GtkBuilderHelper
 import krutils.sql as sqllib
 
@@ -92,6 +92,61 @@ class StatementInfo(DynAttrClass):
 				if match.group('oid') is not None: self.has_oids=True
 
 class UI(object):
+	class NiceViewSolver(Connectable):
+		delayed_id=None
+		def __init__(self,tbl,db,hbox):
+			self.tbl=tbl
+			self.db=db
+			self.hbox=hbox
+			self.reset()
+		def reset(self,name=None,sql=None):
+			self.children=[]
+			self.name=name
+			for child in self.hbox.get_children():
+				self.hbox.remove(child)
+			if name:
+				self.hbox.pack_start(gtk.Label("%s: "%(name,)),expand=False,fill=False)
+				self.hbox.show_all()
+			if sql:
+				self.sql=sql%self
+		def __getitem__(self,key):
+			self.create_input(key)
+			return self.db.api.p
+		def get_sql(self):
+			return self.sql
+		def get_args(self):
+			return [x.child.get_text() for x in self.children]
+		def set_sql(self,sql):
+			self.sql=sql
+		def set_name(self,name):
+			self.hbox.pack_start("%s: "%(name,))
+			self.name=name
+		def on_entry_activate(self,entry):
+			self.run_handlers("activate")
+		def on_delayed_entry_activate(self):
+			self.run_handlers("activate")
+			return False
+		def delayed_entry_activate(self,entry):
+			if self.delayed_id:
+				gobject.source_remove(self.delayed_id)
+			self.delayed_id=gobject.timeout_add(300,self.on_delayed_entry_activate)
+		def create_input(self,key):
+			lbl=gtk.Label(key.capitalize())
+			lbl.set_use_markup(False)
+			self.hbox.pack_start(lbl,fill=False,expand=False)
+			lbl.show()
+			mdl=gtk.ListStore(str,str)
+			entry=gtk.ComboBoxEntry(mdl)
+			self.children.append(entry)
+			self.hbox.pack_start(entry,fill=False,expand=False)
+			try: valquery=self.tbl("definition",{"name":key,"type":"valquery"}).scalar
+			except	IndexError: pass
+			else:
+				for value in self.db(valquery):
+					mdl.append((value[0]," | ".join(value)))
+			entry.child.connect("activate",self.on_entry_activate)
+			entry.child.connect("changed",self.delayed_entry_activate)
+			entry.show()
 	def __getattr__(self,key):
 		msg='%s.%s has no %r attribute'%(self.__class__.__module__,self.__class__.__name__,key)
 		print msg
@@ -429,15 +484,16 @@ class UI(object):
 			self.ui.sqlquery.set_text('__ %s where OID in (%s)'%(self.cur_st.table,','.join(self.selection.get_cross_select(0))))
 			
 
-	def run_query(self,sql):
+	def run_query(self,sql,args=()):
 		if self.in_runquery:
 			print "double run_query: %s"%(sql)
 			traceback.print_stack()
 			return
 		self.in_runquery=True
-		try: result=self.dbconn(sql)
+		try: result=self.dbconn(sql,*args)
 		except Exception,e: self.set_error(e)
 		else:
+			self.set_error(None)
 			self.add_ifnot(self.sql_history,sql)
 			self.stinfo=StatementInfo(result)
 			if not self.stinfo.is_select: self.refresh_tablelist()
@@ -452,7 +508,10 @@ class UI(object):
 
 	def on_sqlquery(self,entry):
 		self.set_error(None)
-		self.run_query(entry.get_text())
+		args=()
+		if not self.ui.raw_btn.get_active():
+			args=self.nvresolver.get_args()
+		self.run_query(entry.get_text(),args)
 
 	def on_choose_table(self,treeview,path,column):
 		if self.ui.limitbtn.get_active(): limitstr=' limit 30'
@@ -555,8 +614,44 @@ class UI(object):
 				if self.selected_api.filename_pat%fname!=dbname:
 					self.ui.fchooser.set_filename(os.path.abspath(dbname))
 
+			try: dbview_table=self.dbconn["db_view"]
+			except KeyError: self.renice_dbview(None)
+			else: self.renice_dbview(dbview_table)
+
 		self.configure_dataview()
 		self.refresh_view()
+
+	def set_raw_view(self,is_raw):
+		raw_visible=dict(sql_hbox=True,tables_scwin=True,views_scwin=False,view_conf=False,reload_select=True)
+		for elem,elem_raw in map(lambda x: (getattr(self.ui,x[0]),x[1]),raw_visible.items()):
+			if (is_raw and elem_raw) or ((not is_raw) and (not elem_raw)): elem.show()
+			else: elem.hide()
+		if not self.nicetbl: return
+		self.nvresolver.reset()
+		self.ui.defviews_store.clear()
+		for name,definition in self.nicetbl("name,definition","type='view'"):
+			self.ui.defviews_store.append((name,definition))
+	def run_custom_query(self):
+		self.run_query(self.nvresolver.get_sql(),self.nvresolver.get_args())
+	def on_defview(self,view,path,column):
+		mdl=view.get_model()
+		i=mdl.get_iter(path)
+		self.nvresolver.reset(mdl.get_value(i,0),mdl.get_value(i,1))
+		self.run_custom_query()
+	def renice_dbview(self,tbl):
+		self.nicetbl=tbl
+		if tbl is None:
+			self.set_raw_view(True)
+			self.ui.raw_btn.hide()
+			return
+		self.nvresolver=self.NiceViewSolver(tbl,self.dbconn,self.ui.view_conf)
+		self.nvresolver.connect("activate",self.on_nvr_activate)
+		self.ui.raw_btn.show()
+		self.ui.raw_btn.set_active(False)
+	def on_nvr_activate(self,nvr):
+		self.run_custom_query()
+	def on_raw_btn(self,btn):
+		self.set_raw_view(btn.get_active())
 	def on_fchooser(self,fchooser):
 		fname=fchooser.get_filename()
 		#if fname is not None: print 'File chosen:',fname
