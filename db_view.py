@@ -137,13 +137,14 @@ class UI(object):
 			lbl.show()
 			mdl=gtk.ListStore(str,str)
 			entry=gtk.ComboBoxEntry(mdl)
+			entry.add_attribute(entry.get_cells()[0],"text",1)
 			self.children.append(entry)
 			self.hbox.pack_start(entry,fill=False,expand=False)
 			try: valquery=self.tbl("definition",{"name":key,"type":"valquery"}).scalar
 			except	IndexError: pass
 			else:
 				for value in self.db(valquery):
-					mdl.append((value[0]," | ".join(map(repr,value))))
+					mdl.append((value[0]," | ".join(map(str,value))))
 			entry.child.connect("activate",self.on_entry_activate)
 			entry.child.connect("changed",self.delayed_entry_activate)
 			entry.show()
@@ -382,6 +383,7 @@ class UI(object):
 			self.ui.fchooser.set_property('visible',False)
 
 	def on_dataview_row_activated(self,treeview,path,column):
+		if not self.ui.raw_btn.get_active(): return
 		try: where_cond=self.cur_st.where_cond(path[0],self.dbconn)
 		except NoKeysError,e: return
 		tbl=self.cur_st.table
