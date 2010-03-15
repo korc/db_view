@@ -5,7 +5,7 @@ import sys,os
 try: mypath=os.path.dirname(__file__)
 except NameError: mypath=os.path.dirname(sys.argv[0])
 
-version=(0,8,3,20100313)
+version=(0,8,3,20100315)
 
 sys.path.append(os.path.join(os.path.dirname(__file__),'lib'))
 sys.path.append(os.path.join(os.path.dirname(__file__),'..','lib'))
@@ -143,7 +143,7 @@ class UI(object):
 			except	IndexError: pass
 			else:
 				for value in self.db(valquery):
-					mdl.append((value[0]," | ".join(value)))
+					mdl.append((value[0]," | ".join(map(repr,value))))
 			entry.child.connect("activate",self.on_entry_activate)
 			entry.child.connect("changed",self.delayed_entry_activate)
 			entry.show()
