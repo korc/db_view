@@ -3,12 +3,12 @@
 import sys,os
 
 try: mypath=os.path.dirname(__file__)
-except NameError: mypath=os.path.dirname(sys.argv[0])
+except NameError: mypath=os.path.realpath(os.path.dirname(sys.argv[0]))
 
-version=(0,8,3,20100315)
+version=(0,9,0,20100316)
 
-sys.path.append(os.path.join(os.path.dirname(__file__),'lib'))
-sys.path.append(os.path.join(os.path.dirname(__file__),'..','lib'))
+sys.path.append(os.path.join(os.path.dirname(mypath),'lib'))
+sys.path.append(os.path.join(os.path.dirname(mypath),'..','lib'))
 
 import re,traceback,locale
 import gtk,gobject

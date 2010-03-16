@@ -1,8 +1,8 @@
 [Setup]
 AppName=DBView
-AppVerName=DBView 0.x
-AppPublisher=me
-AppPublisherURL=http://cyberdefense.jp
+AppVerName=DBView 0.9
+AppPublisher=Cyberdefense Institute Inc.
+AppPublisherURL=http://cyberdefense.jp/
 DefaultDirName={pf}\DBView
 DefaultGroupName=DBView
 DisableProgramGroupPage=true
@@ -11,7 +11,7 @@ Compression=lzma
 SolidCompression=true
 AllowUNCPath=false
 VersionInfoVersion=1.0
-VersionInfoCompany=Cyberdefense Inc.
+VersionInfoCompany=Cyberdefense Institute Inc.
 VersionInfoDescription=Database Viewer
 
 [Dirs]
