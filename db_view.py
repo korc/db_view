@@ -5,7 +5,7 @@ import sys,os
 try: mypath=os.path.dirname(__file__)
 except NameError: mypath=os.path.realpath(os.path.dirname(sys.argv[0]))
 
-version=(0,9,0,20100316)
+version=(0,9,0,20110228)
 
 sys.path.append(os.path.join(os.path.dirname(mypath),'lib'))
 sys.path.append(os.path.join(os.path.dirname(mypath),'..','lib'))
@@ -308,15 +308,28 @@ class UI(object):
 			self.ui.dataview.columns_autosize()
 			if not stinfo.is_new:
 				self.ui.dataview.scroll_to_point(tree_pos.x,tree_pos.y)
-
 	def render_data(self,column,cell,model,iter,idx):
-		#print "render_data:",(column,cell,model,iter,idx)
 		value=model.get_value(iter,idx)
 		if value is not None:
-			cell.set_property('text',str(value) if str(value).count("\n")<5 else "%s ..."%(value[:100],))
+			val_str=str(value)
+			if len(val_str)>30 or '\n' in val_str:
+				cell.set_property('text',"%s..."%(value[:30].replace("\n","\\n").replace("\r","\\r"),))
+			else:
+				cell.set_property('text',val_str)
 		else:
 			cell.set_property('markup','<span foreground="#808080" size="smaller" style="italic">null</span>')
-
+	def on_dataview_query_tooltip(self,treeview,x,y,kbd_mode,tooltip):
+		wx,wy=treeview.convert_widget_to_bin_window_coords(x,y)
+		path_info=treeview.get_path_at_pos(wx,wy)
+		if path_info is None: return False
+		path,column,cell_x,cell_y=path_info
+		for idx,col in enumerate(treeview.get_columns()):
+			if column==col:
+				model=treeview.get_model()
+				val=model.get_value(model.get_iter(path),idx)
+				if val==None: return
+				tooltip.set_text(str(val))
+				return True
 	def addinfo_update(self,obj):
 		cols=[]
 		vals=[]
@@ -516,7 +529,7 @@ class UI(object):
 		self.run_query(entry.get_text(),args)
 
 	def on_choose_table(self,treeview,path,column):
-		if self.ui.limitbtn.get_active(): limitstr=' limit 30'
+		if self.ui.limitbtn.get_active(): limitstr=' limit 500'
 		else: limitstr=''
 		tblname=self.tablestore[path][0]
 		if '-' in tblname: tblname='`%s`'%tblname
@@ -589,7 +602,7 @@ class UI(object):
 		self.ui.sqlquery.activate()
 
 	def on_xtbl_activate(self,menuitem,tblname):
-		self.ui.sqlquery.set_text('select %s* from %s where %s in (select %s %s)'%(self.dbconn.api.oidstr,tblname,self.selection.col,self.selection.col,self.current_select_from.replace(' limit 30','')))
+		self.ui.sqlquery.set_text('select %s* from %s where %s in (select %s %s)'%(self.dbconn.api.oidstr,tblname,self.selection.col,self.selection.col,self.current_select_from.replace(' limit 500','')))
 		self.ui.sqlquery.activate()
 
 	def on_dbnameentry_activate(self,entry):

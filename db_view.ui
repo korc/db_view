@@ -1,4 +1,4 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <interface>
   <requires lib="gtk+" version="2.16"/>
   <!-- interface-naming-policy toplevel-contextual -->
@@ -17,7 +17,6 @@
     <child>
       <object class="GtkVBox" id="vbox1">
         <property name="visible">True</property>
-        <property name="orientation">vertical</property>
         <child>
           <object class="GtkHBox" id="hbox3">
             <property name="visible">True</property>
@@ -147,7 +146,6 @@
             <child>
               <object class="GtkVBox" id="vbox2">
                 <property name="visible">True</property>
-                <property name="orientation">vertical</property>
                 <child>
                   <object class="GtkHBox" id="sql_hbox">
                     <property name="visible">True</property>
@@ -395,8 +393,10 @@
                       <object class="GtkTreeView" id="dataview">
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
+                        <property name="has_tooltip">True</property>
                         <signal name="event_after" handler="on_dataview_event_after"/>
                         <signal name="row_activated" handler="on_dataview_row_activated"/>
+                        <signal name="query_tooltip" handler="on_dataview_query_tooltip"/>
                       </object>
                     </child>
                   </object>
