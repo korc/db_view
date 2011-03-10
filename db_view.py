@@ -5,7 +5,7 @@ import sys,os
 try: mypath=os.path.dirname(__file__)
 except NameError: mypath=os.path.realpath(os.path.dirname(sys.argv[0]))
 
-version=(0,9,0,20110228)
+version=(0,9,0,20110310)
 
 sys.path.append(os.path.join(os.path.dirname(mypath),'lib'))
 sys.path.append(os.path.join(os.path.dirname(mypath),'..','lib'))
@@ -293,6 +293,7 @@ class UI(object):
 		else:
 			self.ui.query_lbl.set_text(str(len(stinfo.store)))
 			self.ui.select_combo.set_active_iter(self.add_ifnot(self.sql_select_history,stinfo.sql,80))
+			self.expand_columns_checked=not self.ui.expand_btn.get_active()
 			if stinfo.is_new:
 				for idx,title in enumerate(stinfo.cols):
 					#col=self.ui.dataview.insert_column_with_attributes(idx,title.replace('_','__'),gtk.CellRendererText(),text=idx)
@@ -312,7 +313,7 @@ class UI(object):
 		value=model.get_value(iter,idx)
 		if value is not None:
 			val_str=str(value)
-			if len(val_str)>30 or '\n' in val_str:
+			if self.expand_columns_checked and (len(val_str)>30 or '\n' in val_str):
 				cell.set_property('text',"%s..."%(value[:30].replace("\n","\\n").replace("\r","\\r"),))
 			else:
 				cell.set_property('text',val_str)
