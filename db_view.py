@@ -5,7 +5,7 @@ import sys,os
 try: mypath=os.path.dirname(__file__)
 except NameError: mypath=os.path.realpath(os.path.dirname(sys.argv[0]))
 
-version=(0,9,0,20110310)
+version=(0,9,0,20110311)
 
 sys.path.append(os.path.join(os.path.dirname(mypath),'lib'))
 sys.path.append(os.path.join(os.path.dirname(mypath),'..','lib'))
@@ -259,8 +259,9 @@ class UI(object):
 		menuitem.set_submenu(menu)
 		return lbl,menu
 		
-
 	def on_refresh(self,btn):
+		self.refresh_view()
+	def	on_expand_btn(self,btn):
 		self.refresh_view()
 
 	def on_col_clicked(self,col,idx):
@@ -296,7 +297,6 @@ class UI(object):
 			self.expand_columns_checked=not self.ui.expand_btn.get_active()
 			if stinfo.is_new:
 				for idx,title in enumerate(stinfo.cols):
-					#col=self.ui.dataview.insert_column_with_attributes(idx,title.replace('_','__'),gtk.CellRendererText(),text=idx)
 					col=gtk.TreeViewColumn(title.replace('_','__'))
 					cell=gtk.CellRendererText()
 					col.pack_start(cell)
@@ -313,8 +313,10 @@ class UI(object):
 		value=model.get_value(iter,idx)
 		if value is not None:
 			val_str=str(value)
-			if self.expand_columns_checked and (len(val_str)>30 or '\n' in val_str):
-				cell.set_property('text',"%s..."%(value[:30].replace("\n","\\n").replace("\r","\\r"),))
+			valstr_len=len(val_str)
+			if self.expand_columns_checked and (valstr_len>30 or '\n' in val_str):
+				cell.set_property('text',value.replace("\n","\\n").replace("\r","\\r"))
+				if cell.get_property("width-chars")<min(30,valstr_len): cell.set_property("width-chars",min(30,valstr_len))
 			else:
 				cell.set_property('text',val_str)
 		else:

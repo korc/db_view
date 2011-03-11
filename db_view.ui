@@ -445,7 +445,7 @@
             </child>
             <child>
               <object class="GtkCheckButton" id="expand_btn">
-                <property name="label" translatable="yes">Ex_pand columns</property>
+                <property name="label" translatable="yes">Ex_pand columns data</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">False</property>
