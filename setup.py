@@ -2,15 +2,20 @@
 
 from distutils.core import setup
 import py2exe
-import sys
+import sys,os
 sys.path.append("lib")
+sys.path.append(os.path.join("..","lib"))
 
-setup(name="db_view",description="Database Viewer",version="0.9.0",
+gtk_includes="cairo pango pangocairo atk gobject gio".split()
+base_includes="socket gzip BaseHTTPServer sqlite3.dbapi2".split()
+local_includes="krutils.misc krutils.gtkutil krutils.sql".split()
+
+setup(name="db_view",description="Database Viewer",version="0.9.1",
 	windows=[dict(script="db_view.py")],
 	options=dict(
 		py2exe=dict(
 			packages='encodings',
-			includes='cairo,pango,pangocairo,atk,gobject,socket,gzip,gtk.glade,BaseHTTPServer,sqlite3.dbapi2,krutils.misc,krutils.gtkutil,krutils.sql',
+			includes=",".join(base_includes+gtk_includes+local_includes),
                         dll_excludes='libglade-2.0-0.dll',
 		)
 	),
