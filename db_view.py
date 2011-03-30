@@ -5,7 +5,7 @@ import sys,os
 try: mypath=os.path.dirname(__file__)
 except NameError: mypath=os.path.realpath(os.path.dirname(sys.argv[0]))
 
-version=(0,9,0,20110311)
+version=(0,9,0,20110330)
 
 sys.path.append(os.path.join(os.path.dirname(mypath),'lib'))
 sys.path.append(os.path.join(os.path.dirname(mypath),'..','lib'))
@@ -443,7 +443,7 @@ class UI(object):
 			copy_row=[]
 			for cell in row:
 				if cell is None: cell=""
-				if '\n' in cell or '\r' in cell or '"' in cell or delim in cell: cell='"%s"'%(cell.replace('"','""'))
+				if '\n' in cell or '\r' in cell or '"' in cell or delim in cell: cell='"%s"'%(cell.replace('"','""').replace("\r\n","\n"))
 				copy_row.append(cell)
 			copy_text.append(delim.join(copy_row))
 		return '\n'.join(copy_text)
