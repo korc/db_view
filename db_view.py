@@ -5,7 +5,7 @@ import sys,os
 try: mypath=os.path.dirname(__file__)
 except NameError: mypath=os.path.realpath(os.path.dirname(sys.argv[0]))
 
-version=(0,9,0,20110330)
+version=(0,9,0,20110605)
 
 sys.path.append(os.path.join(os.path.dirname(mypath),'lib'))
 sys.path.append(os.path.join(os.path.dirname(mypath),'..','lib'))
@@ -584,7 +584,10 @@ class UI(object):
 		for child in self.xtbl_menu.get_children(): self.xtbl_menu.remove(child)
 		self.table_list=[]
 		for idx,name in enumerate(self.dbconn.api.table_names()):
-			count=self.dbconn.scalar(name,'count(*)')
+			try: count=self.dbconn.scalar(name,'count(*)')
+			except Exception,e:
+				print >>sys.stderr,"Failed loading count(*) for %s"%(name)
+				count=-1
 			self.tablestore.append((name,count))
 			self.add_menu_item(self.xref_menu,self.lbl_idx(idx,name),self.on_xref_activate,name)
 			self.add_menu_item(self.xtbl_menu,self.lbl_idx(idx,name),self.on_xtbl_activate,name)
