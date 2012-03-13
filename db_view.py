@@ -83,7 +83,7 @@ class StatementInfo(DynAttrClass):
 			for row in result:
 				add_row=[]
 				for idx,val in enumerate(row):
-					if type(val)==buffer: val=unicode(val,'latin1','replace')
+					if isinstance(val,buffer): val=str(val).decode("latin1","replace")
 					add_row.append(val)
 				self.store.append(add_row)
 			match=self.search_re.match(self.sql)
