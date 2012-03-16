@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import sys,os
+import datetime
 
 try: mypath=os.path.dirname(__file__)
 except NameError: mypath=os.path.realpath(os.path.dirname(sys.argv[0]))
@@ -84,6 +85,8 @@ class StatementInfo(DynAttrClass):
 				add_row=[]
 				for idx,val in enumerate(row):
 					if isinstance(val,buffer): val=str(val)
+					if isinstance(val,datetime.datetime):
+						val=val.strftime("%c")
 					if isinstance(val,str):
 						try: val=val.decode("utf8")
 						except UnicodeDecodeError:
