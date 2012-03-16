@@ -80,7 +80,7 @@ class StatementInfo(DynAttrClass):
 		if self.cols:
 			self.colidx=dict([(x,idx) for idx,x in enumerate(self.cols)])
 			self.is_select=True
-			self.store=gtk.ListStore(*[str for x in self.cols])
+			self.store=gtk.ListStore(*[object for x in self.cols])
 			for row in result:
 				add_row=[]
 				for idx,val in enumerate(row):
