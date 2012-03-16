@@ -69,9 +69,18 @@ class StatementInfo(DynAttrClass):
 			ret={}
 			for key in db[self.table].keys:
 				val=self.store[row][self.colidx[key]]
-				if val is not None and val.isdigit(): val=int(val)
+				if val is not None and isinstance(val,(str,unicode)) and val.isdigit(): val=int(val)
 				ret[key]=val
 			return ret
+	def conv_dbval2gtkval(self, val):
+		if isinstance(val,buffer): val=str(val)
+		elif isinstance(val,datetime.datetime):
+			val=val.strftime("%c")
+		if isinstance(val,str):
+			try: val=val.decode("utf8")
+			except UnicodeDecodeError:
+				val=val.encode("string_escape")
+		return val
 	def set_result(self,result):
 		self.sql=result.sql
 		self.cols=result.cols
@@ -82,17 +91,7 @@ class StatementInfo(DynAttrClass):
 			self.is_select=True
 			self.store=gtk.ListStore(*[object for x in self.cols])
 			for row in result:
-				add_row=[]
-				for idx,val in enumerate(row):
-					if isinstance(val,buffer): val=str(val)
-					if isinstance(val,datetime.datetime):
-						val=val.strftime("%c")
-					if isinstance(val,str):
-						try: val=val.decode("utf8")
-						except UnicodeDecodeError:
-							val=val.decode("latin1","replace")
-					add_row.append(val)
-				self.store.append(add_row)
+				self.store.append(map(self.conv_dbval2gtkval,row))
 			match=self.search_re.match(self.sql)
 			if match:
 				if match.group('table') is not None: self.table=match.group('table')
@@ -338,7 +337,12 @@ class UI(object):
 				model=treeview.get_model()
 				val=model.get_value(model.get_iter(path),idx)
 				if val==None: return
-				tooltip.set_text(str(val))
+				if isinstance(val,unicode): val=val.encode("utf8")
+				else: val=str(val)
+				if "\0" in val: val=val.encode("string_escape")
+				try: tooltip.set_text(val)
+				except Exception,e:
+					print "cannot set as tooltip: %s: %r"%(e,val,type(val))
 				return True
 	def addinfo_update(self,obj):
 		cols=[]
@@ -412,6 +416,8 @@ class UI(object):
 		tbl=self.cur_st.table
 		colname=column.get_title().replace('__','_')
 		val=self.dbconn.api.escape(self.dbconn.scalar(tbl,colname,dict([(k,sqllib.Eq(v,self.dbconn.api.p)) for k,v in where_cond.iteritems()])))
+		try: val=val.decode("utf8")
+		except UnicodeDecodeError: pass
 		condstr=' where '+' AND '.join(['%s=%s'%(k,self.dbconn.api.escape(v)) for k,v in where_cond.iteritems()])
 		s1='update %s set %s='%(self.cur_st.table,colname)
 		self.ui.sqlquery.set_text(s1+val+condstr)
@@ -623,7 +629,6 @@ class UI(object):
 		if self.current_dbname!=name:
 			self.load_db(name)
 
-
 	def load_db(self,dbname):
 		self.current_dbname=dbname
 
@@ -631,10 +636,10 @@ class UI(object):
 			self.dbconn=sqllib.DBConn(dbname,self.selected_api)
 		except Exception,e:
 			print 'Error loading %r'%(dbname)
-			raise
+			self.set_error(e)
+			self.tablestore.clear()
 		else:
-			#print "Loaded: %r via %r"%(dbname,self.selected_api)
-
+			self.set_error(None)
 			if self.ui.dbnameentry.get_text()!=dbname:
 				self.ui.dbnameentry.set_text(dbname)
 			if self.selected_api.filename_pat:
@@ -646,8 +651,8 @@ class UI(object):
 			except KeyError: self.renice_dbview(None)
 			else: self.renice_dbview(dbview_table)
 
-		self.configure_dataview()
-		self.refresh_view()
+			self.configure_dataview()
+			self.refresh_view()
 
 	def set_raw_view(self,is_raw):
 		raw_visible=dict(sql_hbox=True,tables_scwin=True,views_scwin=False,view_conf=False,reload_select=True)
@@ -682,7 +687,6 @@ class UI(object):
 		self.set_raw_view(btn.get_active())
 	def on_fchooser(self,fchooser):
 		fname=fchooser.get_filename()
-		#if fname is not None: print 'File chosen:',fname
 		if type(fname)==str and not (fname==self.current_dbname) and os.path.isfile(fname):
 			self.load_db(fname)
 			self.ui.mainwindow.set_title(os.path.basename(fname))
