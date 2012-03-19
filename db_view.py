@@ -20,6 +20,7 @@ import krutils.sql as sqllib
 
 def short_str(s,maxsize=15):
 	if s is None: return ''
+	if not isinstance(s,(str,unicode)): s=str(s) 
 	s.replace('\r\n','\n').replace('\n',' ').replace('\r',' ')
 	if len(s)>maxsize:
 		s=s[:maxsize]+'..'
@@ -89,9 +90,9 @@ class StatementInfo(DynAttrClass):
 		if self.cols:
 			self.colidx=dict([(x,idx) for idx,x in enumerate(self.cols)])
 			self.is_select=True
-			self.store=gtk.ListStore(*[object for x in self.cols])
+			self.store=gtk.ListStore(*([object for x in self.cols]+[str]))
 			for row in result:
-				self.store.append(map(self.conv_dbval2gtkval,row))
+				self.store.append(map(self.conv_dbval2gtkval,row)+[""])
 			match=self.search_re.match(self.sql)
 			if match:
 				if match.group('table') is not None: self.table=match.group('table')
@@ -242,13 +243,12 @@ class UI(object):
 				self.ui.dbapicombo.set_active(idx)
 				return
 
-	def on_search(self,store,x,user_input,iter):
-		n=store.get_n_columns()
-		data=[store.get_value(iter,x) for x in range(store.get_n_columns())]
+	def on_search(self,store,x,user_input,row_iter):
 		user_input=user_input.lower()
-		for colval in data:
-			if type(colval) in (str,unicode) and user_input in colval.lower():
-				return False
+		for colval in map(lambda x: store.get_value(row_iter,x),range(store.get_n_columns())):
+			if colval is None: continue
+			if not isinstance(colval,(str,unicode)): colval=str(colval)
+			if user_input in colval.lower(): return False
 		return True
 
 	def repack_menulbl(self,menuitem):
@@ -456,6 +456,7 @@ class UI(object):
 			copy_row=[]
 			for cell in row:
 				if cell is None: cell=""
+				if not isinstance(cell,(str,unicode)): cell=str(cell)
 				if '\n' in cell or '\r' in cell or '"' in cell or delim in cell: cell='"%s"'%(cell.replace('"','""').replace("\r\n","\n"))
 				copy_row.append(cell)
 			copy_text.append(delim.join(copy_row))
@@ -504,8 +505,8 @@ class UI(object):
 
 	def on_menu_copy(self,menuitem):
 		if self.selection:
-			self.clipboard.set_text(' '.join(self.selection.get_cross_select()))
-			self.clipboard2.set_text(' '.join(self.selection.get_cross_select()))
+			self.clipboard.set_text(' '.join(map(str,self.selection.get_cross_select())))
+			self.clipboard2.set_text(' '.join(map(str,self.selection.get_cross_select())))
 	def on_menu_del(self,menuitem):
 		if self.selection.rows:
 			self.ui.sqlquery.set_text('delete from %s where OID in (%s)'%(self.cur_st.table,','.join(self.selection.get_cross_select(0))))
