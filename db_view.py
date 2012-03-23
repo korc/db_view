@@ -648,8 +648,8 @@ class UI(object):
 				if self.selected_api.filename_pat%fname!=dbname:
 					self.ui.fchooser.set_filename(os.path.abspath(dbname))
 
-			try: dbview_table=self.dbconn["db_view"]
-			except KeyError: self.renice_dbview(None)
+			try: dbview_table=self.dbconn.db_view
+			except Exception: self.renice_dbview(None)
 			else: self.renice_dbview(dbview_table)
 
 			self.configure_dataview()
