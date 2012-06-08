@@ -627,22 +627,36 @@ class UI(object):
 
 	def on_dbnameentry_activate(self,entry):
 		name=entry.get_text()
-		if self.current_dbname!=name:
+		if name:
 			self.load_db(name)
-
+	def get_password(self, msg):
+		dlg=gtk.Dialog(title=msg, buttons=(gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
+		e=gtk.Entry()
+		e.set_visibility(False)
+		dlg.get_action_area().add(e)
+		e.show()
+		dlg.run()
+		ret=e.get_text()
+		dlg.destroy()
+		return ret
+	@property
+	def current_dbname(self): return self.ui.dbnameentry.get_text()
+	@current_dbname.setter
+	def current_dbname(self, v): self.ui.dbnameentry.set_text(v)
 	def load_db(self,dbname):
 		self.current_dbname=dbname
-
 		try:
-			self.dbconn=sqllib.DBConn(dbname,self.selected_api)
+			try: self.dbconn=sqllib.DBConn(dbname,self.selected_api)
+			except Exception,e:
+				if "password" in str(e):
+					self.dbconn=sqllib.DBConn(dbname+" password="+self.get_password(str(e)),self.selected_api)
+				else: raise
 		except Exception,e:
 			print 'Error loading %r'%(dbname)
 			self.set_error(e)
 			self.tablestore.clear()
 		else:
 			self.set_error(None)
-			if self.ui.dbnameentry.get_text()!=dbname:
-				self.ui.dbnameentry.set_text(dbname)
 			if self.selected_api.filename_pat:
 				fname=self.ui.fchooser.get_filename()
 				if self.selected_api.filename_pat%fname!=dbname:
