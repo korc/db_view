@@ -360,7 +360,7 @@ class UI(object):
 			if tgl.get_active():
 				e.show()
 				cols.append(col)
-				if not (val.isdigit() or val.upper()=='NULL'): val=self.dbconn.api.escape(val)
+				if not isinstance(val, (str, unicode)) or not (val.isdigit() or val.upper()=='NULL'): val=self.dbconn.api.escape(val)
 				vals.append(val)
 
 		self.ui.sqlquery.set_text('insert into %s (%s) values (%s)'%(self.cur_st.table,','.join(cols),','.join(vals)))
@@ -619,7 +619,7 @@ class UI(object):
 	def on_xref_activate(self,menuitem,tblname):
 		sel=self.selection.text 
 		if sel is None: cond=' is null'
-		elif sel.isdigit(): cond='=%s'%(sel,)
+		elif isinstance(sel, (str,unicode)) and sel.isdigit(): cond='=%s'%(sel,)
 		else: cond='=%s'%(self.dbconn.api.escape(sel))
 		self.ui.sqlquery.set_text('select %s* from %s where %s%s'%(self.dbconn.api.oidstr,tblname,self.selection.col,cond))
 		self.ui.sqlquery.activate()
