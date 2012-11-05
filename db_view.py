@@ -273,16 +273,22 @@ class UI(object):
 	def on_col_clicked(self,col,idx):
 		sql=self.cur_st.sql
 		ord_st=' order by '
+		limit_st=" limit "
+		try: limit_idx=sql.lower().rindex(limit_st)
+		except ValueError: limit_st=""
+		else:
+			limit_st=sql[limit_idx:]
+			sql=sql[:limit_idx]
 		cur_col=self.cur_st.cols[idx]
 		ord_idx=sql.lower().rfind(ord_st)
-		if ord_idx==-1: sql=sql+ord_st+cur_col
+		if ord_idx==-1: sql=sql+ord_st+cur_col+limit_st
 		else:
 			after_ord=sql[ord_idx+len(ord_st):].split()
 			if after_ord[0]==cur_col:
 				if len(after_ord)>1 and after_ord[1].lower()=='desc': after_ord.pop(1)
 				else: after_ord.insert(1,'desc')
 			after_ord[0]=ord_st+cur_col
-			sql=sql[:ord_idx]+' '.join(after_ord)
+			sql=(sql[:ord_idx]+' '.join(after_ord))+limit_st
 		self.ui.sqlquery.set_text(sql)
 		self.ui.sqlquery.activate()
 
