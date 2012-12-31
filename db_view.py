@@ -13,10 +13,87 @@ sys.path.append(os.path.join(os.path.dirname(mypath),'..','lib'))
 
 import re,traceback,locale
 import gtk,gobject
+import sqllib
 
-from krutils.misc import DynAttrClass,Connectable
-from krutils.gtkutil import GtkBuilderHelper
-import krutils.sql as sqllib
+class cached_property(object):
+	_fset=_fget=None
+	def __set_basic_attr(self, func):
+		self.__name__=func.__name__
+		self.__doc__=func.__doc__
+		self.__module__=func.__module__
+	@property
+	def fset(self): return self._fset
+	@fset.setter
+	def fset(self, v):
+		self._fset=v
+		self.__set_basic_attr(v)
+	@property
+	def fget(self): return self._fget
+	@fget.setter
+	def fget(self, v):
+		self._fget=v
+		self.__set_basic_attr(v)
+	def setter(self, func):
+		self.fset=func
+		return self
+	def getter(self, func):
+		self.fget=func
+		return self
+	def __init__(self, fget=None, fset=None):
+		if fget is not None: self.fget=fget
+		if fset is not None: self.fset=fset
+	def __get__(self, instance, owner):
+		if instance is None: return self
+		try: return instance._property_cache[self.__name__]
+		except AttributeError: instance._property_cache={}
+		except KeyError: pass
+		ret=instance._property_cache[self.__name__]=self.fget(instance)
+		return ret
+	def __set__(self, instance, value):
+		if self.fset is not None:
+			value=self._fset(instance, value)
+		try: cache=instance._property_cache
+		except AttributeError: cache=instance._property_cache={}
+		cache[self.__name__]=value
+	def __delete__(self, instance):
+		try: del instance._property_cache[self.__name__]
+		except (AttributeError, KeyError):
+			raise AttributeError("No attribute", self)
+
+class GtkBuilderHelper(object):
+	def __init__(self,filename,cbobj=None):
+		self.filename=filename
+		self._ui=gtk.Builder()
+		self._ui.add_from_file(filename)
+		if cbobj!=None: self._ui.connect_signals(cbobj)
+	def __getattr__(self,key):
+		if key[0]=='_': raise AttributeError,key
+		val=self._ui.get_object(key)
+		if val!=None:
+			setattr(self,key,val)
+			return val
+		raise AttributeError,"No object named '"+key+"' in %r"%(self.filename)
+
+class Connectable(object):
+	@property
+	def connect_table(self):
+		try: return self.__connect_table
+		except AttributeError:
+			ret=self.__connect_table={}
+			return ret
+	@connect_table.setter
+	def connect_table(self, v): self.__connect_table=v
+	def run_handlers(self,signal,*args,**kwargs):
+		for func,add_args,add_kwargs in self.connect_table.get(signal,[]):
+			func(self,*(args+add_args),**dict(kwargs,**add_kwargs))
+	def connect(self,signal,func,*args,**kwargs):
+		self.connect_table.setdefault(signal,[]).append((func,args,kwargs))
+	def disconnect(self,signal,func):
+		idx=0
+		signal_table=self.connect_table[signal]
+		while idx<len(signal_table):
+			if signal_table[idx][0]==func: signal_table.pop(idx)
+			else: idx+=1
 
 def short_str(s,maxsize=15):
 	if s is None: return ''
@@ -53,13 +130,18 @@ class Selection(object):
 
 class NoKeysError(Exception): pass
 
-class StatementInfo(DynAttrClass):
+class StatementInfo(object):
 	search_re=re.compile(r'^\s*(?P<statement>select)\s+(?P<oid>OID,)?.+?from\s+(?P<table>\w+).*',re.I|re.S)
-	_defaults=dict(table=None,store=None,sql=None,has_oids=False,is_new=True,is_select=False)
-	__slots__=_defaults.keys()+['cols','colidx','coltypes']
+	_defaults=dict(table=None,sql=None, store=None,has_oids=False,is_new=True,is_select=False)
+	__slots__=_defaults.keys()+['colidx', '_property_cache', '_result']
 	_init_tuple=('result',)
-	def get_cols(self): return []
-	def get_coltypes(self): return {}
+	def __init__(self, *args, **kwargs):
+		for k,v in dict(self._defaults, **kwargs).iteritems(): setattr(self, k, v)
+		for idx,v in enumerate(args): setattr(self, self._init_tuple[idx], v)
+	@cached_property
+	def cols(self): return []
+	@cached_property
+	def coltypes(self): return {}
 	def where_cond(self,row,db):
 		if self.has_oids:
 			oid=self.store[row][0]
@@ -82,7 +164,10 @@ class StatementInfo(DynAttrClass):
 			except UnicodeDecodeError:
 				val=val.encode("string_escape")
 		return val
-	def set_result(self,result):
+	@property
+	def result(self): return self._result
+	@result.setter
+	def result(self, result):
 		self.sql=result.sql
 		self.cols=result.cols
 		try: self.table=result.table
@@ -97,6 +182,7 @@ class StatementInfo(DynAttrClass):
 			if match:
 				if match.group('table') is not None: self.table=match.group('table')
 				if match.group('oid') is not None: self.has_oids=True
+		self._result=result
 
 class UI(object):
 	class NiceViewSolver(Connectable):
@@ -119,9 +205,11 @@ class UI(object):
 		def __getitem__(self,key):
 			self.create_input(key)
 			return self.db.api.p
-		def get_sql(self):
+		@cached_property
+		def sql(self):
 			return self.sql
-		def get_args(self):
+		@cached_property
+		def args(self):
 			return [x.child.get_text() for x in self.children]
 		def set_sql(self,sql):
 			self.sql=sql
