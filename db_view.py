@@ -308,7 +308,7 @@ class UI(object):
 
 		self.ui.dataview.set_search_equal_func(self.on_search)
 
-		self.tablestore=gtk.ListStore(str,int)
+		self.tablestore=gtk.ListStore(str,str)
 		self.ui.tablesview.set_model(self.tablestore)
 		self.ui.tablesview.insert_column_with_attributes(-1,'Name',gtk.CellRendererText(),text=0)
 		self.ui.tablesview.insert_column_with_attributes(-1,'Rows',gtk.CellRendererText(),text=1)
@@ -692,13 +692,15 @@ class UI(object):
 		for child in self.xtbl_menu.get_children(): self.xtbl_menu.remove(child)
 		self.table_list=[]
 		for idx,name in enumerate(self.dbconn.api.table_names()):
-			if "NO_DBCOUNT" in os.environ:
-				count=-1
-			else:
-				try: count=self.dbconn.scalar(name,'count(*)')
-				except Exception,e:
-					print >>sys.stderr,"Failed loading count(*) for %s"%(name)
-					count=-1
+			count=None
+			if "NO_DBCOUNT" not in os.environ:
+				try: pg_count=self.dbconn["pg_class"]('reltuples', {"relname":name}).scalar
+				except: pg_count=None
+				if pg_count is None or pg_count<int(os.environ.get("PG_MAX_COUNT","100000")):
+					try: count=self.dbconn.scalar(name,'count(*)')
+					except:
+						print >>sys.stderr,"Failed loading count(*) for %s"%(name)
+				else: count=u"%s\xb1\u03b1"%(int(pg_count),)
 			self.tablestore.append((name,count))
 			self.add_menu_item(self.xref_menu,self.lbl_idx(idx,name),self.on_xref_activate,name)
 			self.add_menu_item(self.xtbl_menu,self.lbl_idx(idx,name),self.on_xtbl_activate,name)
