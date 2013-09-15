@@ -415,7 +415,7 @@ class UI(object):
 			val_str=str(value)
 			valstr_len=len(val_str)
 			if self.expand_columns_checked and (valstr_len>30 or '\n' in val_str):
-				cell.set_property('text',value.replace("\n","\\n").replace("\r","\\r"))
+				cell.set_property('text', val_str.replace("\n","\\n").replace("\r","\\r"))
 				if cell.get_property("width-chars")<min(30,valstr_len): cell.set_property("width-chars",min(30,valstr_len))
 			else:
 				cell.set_property('text',val_str)
