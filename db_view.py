@@ -12,7 +12,9 @@ sys.path.append(os.path.join(os.path.dirname(mypath),'lib'))
 sys.path.append(os.path.join(os.path.dirname(mypath),'..','lib'))
 
 import re,traceback,locale
-import gtk,gobject
+
+from gi.repository import Gtk as gtk, GObject as gobject, Gdk  # @UnresolvedImport
+
 import sqllib
 
 class cached_property(object):
@@ -120,8 +122,8 @@ class Selection(object):
 				if tcol is col: break
 			self.col=col.get_title().replace('__','_')
 			model,selected_rows=treeview.get_selection().get_selected_rows()
-			self.rows=[model[x[0]] for x in selected_rows]
-			self.text=model[path[0]][self.colnr]
+			self.rows=[model[x] for x in selected_rows]
+			self.text=model[path][self.colnr]
 	def __nonzero__(self):
 		return self.colnr is not None
 	def get_cross_select(self,colnr=None):
@@ -198,7 +200,7 @@ class UI(object):
 			for child in self.hbox.get_children():
 				self.hbox.remove(child)
 			if name:
-				self.hbox.pack_start(gtk.Label("%s: "%(name,)),expand=False,fill=False)
+				self.hbox.pack_start(gtk.Label("%s: "%(name,)), False, False, 0)
 				self.hbox.show_all()
 			if sql:
 				self.sql=sql%self
@@ -214,7 +216,7 @@ class UI(object):
 		def set_sql(self,sql):
 			self.sql=sql
 		def set_name(self,name):
-			self.hbox.pack_start("%s: "%(name,))
+			self.hbox.pack_start("%s: "%(name,), False, False, 0)
 			self.name=name
 		def on_entry_activate(self,entry):
 			self.run_handlers("activate")
@@ -228,13 +230,13 @@ class UI(object):
 		def create_input(self,key):
 			lbl=gtk.Label(key.capitalize())
 			lbl.set_use_markup(False)
-			self.hbox.pack_start(lbl,fill=False,expand=False)
+			self.hbox.pack_start(lbl, False, False, 0)
 			lbl.show()
 			mdl=gtk.ListStore(str,str)
 			entry=gtk.ComboBoxEntry(mdl)
 			entry.add_attribute(entry.get_cells()[0],"text",1)
 			self.children.append(entry)
-			self.hbox.pack_start(entry,fill=False,expand=False)
+			self.hbox.pack_start(entry, False, False, 0)
 			try: valquery=self.tbl("definition",{"name":key,"type":"valquery"}).scalar
 			except	IndexError: pass
 			else:
@@ -265,7 +267,7 @@ class UI(object):
 
 		self.saved_sql_store=gtk.ListStore(str,str)
 		self.ui.saved_sql_entry.set_model(self.saved_sql_store)
-		self.ui.saved_sql_entry.set_text_column(0)
+		self.ui.saved_sql_entry.set_entry_text_column(0)
 
 		self.selection=Selection()
 		self.addbox_active_tables={}
@@ -273,7 +275,7 @@ class UI(object):
 		self.dbapimodel=gtk.ListStore(str)
 		self.ui.dbapicombo.set_model(self.dbapimodel)
 		cell=gtk.CellRendererText()
-		self.ui.dbapicombo.pack_start(cell)
+		self.ui.dbapicombo.pack_start(cell, False)
 		self.ui.dbapicombo.add_attribute(cell,'text',0)
 
 		for api in sqllib.DBConn.api_list:
@@ -283,11 +285,11 @@ class UI(object):
 		self.sql_select_history=gtk.ListStore(str,str)
 		self.ui.select_combo.set_model(self.sql_select_history)
 		cell=gtk.CellRendererText()
-		self.ui.select_combo.pack_start(cell)
+		self.ui.select_combo.pack_start(cell, False)
 		self.ui.select_combo.add_attribute(cell,'text',1)
 
-		self.clipboard=gtk.Clipboard()
-		self.clipboard2=gtk.Clipboard(selection='PRIMARY')
+		self.clipboard=gtk.Clipboard.get(Gdk.atom_intern_static_string("CLIPBOARD"))
+		self.clipboard2=gtk.Clipboard.get(Gdk.atom_intern_static_string("PRIMARY"))
 
 		self.sql_history=gtk.ListStore(str)
 		try:
@@ -304,14 +306,14 @@ class UI(object):
 		self.xtbl_lbl,self.xtbl_menu=self.repack_menulbl(self.ui.xtbl)
 
 		self.ui.dataview.connect_after('realize',self.on_dataview_realize)
-		self.ui.dataview.get_selection().set_mode(gtk.SELECTION_MULTIPLE)
+		self.ui.dataview.get_selection().set_mode(gtk.SelectionMode.MULTIPLE)
 
-		self.ui.dataview.set_search_equal_func(self.on_search)
+		self.ui.dataview.set_search_equal_func(self.on_search, None)
 
 		self.tablestore=gtk.ListStore(str,str)
 		self.ui.tablesview.set_model(self.tablestore)
-		self.ui.tablesview.insert_column_with_attributes(-1,'Name',gtk.CellRendererText(),text=0)
-		self.ui.tablesview.insert_column_with_attributes(-1,'Rows',gtk.CellRendererText(),text=1)
+		self.ui.tablesview.insert_column(gtk.TreeViewColumn('Name',gtk.CellRendererText(),text=0), -1)
+		self.ui.tablesview.insert_column(gtk.TreeViewColumn('Rows',gtk.CellRendererText(),text=1), -1)
 		ff=gtk.FileFilter()
 		ff.set_name('SQLite 3')
 		ff.add_pattern('*.sq3')
@@ -331,7 +333,7 @@ class UI(object):
 				self.ui.dbapicombo.set_active(idx)
 				return
 
-	def on_search(self,store,x,user_input,row_iter):
+	def on_search(self,store,x,user_input,row_iter, user_data):
 		user_input=user_input.lower()
 		for colval in map(lambda x: store.get_value(row_iter,x),range(store.get_n_columns())):
 			if colval is None: continue
@@ -343,11 +345,11 @@ class UI(object):
 		hbox=gtk.HBox()
 		menu_child=menuitem.get_child()
 		menuitem.remove(menu_child)
-		hbox.pack_start(menu_child)
+		hbox.pack_start(menu_child, False, False, 0)
 		menuitem.add(hbox)
 		hbox.show()
 		lbl=gtk.Label()
-		hbox.pack_start(lbl)
+		hbox.pack_start(lbl, False, False, 0)
 		lbl.show()
 		menu=gtk.Menu()
 		menuitem.set_submenu(menu)
@@ -399,7 +401,7 @@ class UI(object):
 				for idx,title in enumerate(stinfo.cols):
 					col=gtk.TreeViewColumn(title.replace('_','__'))
 					cell=gtk.CellRendererText()
-					col.pack_start(cell)
+					col.pack_start(cell, False)
 					col.set_resizable(True)
 					col.set_clickable(True)
 					col.set_cell_data_func(cell,self.render_data,idx)
@@ -412,7 +414,7 @@ class UI(object):
 	def render_data(self,column,cell,model,iter,idx):
 		value=model.get_value(iter,idx)
 		if value is not None:
-			val_str=str(value)
+			val_str=value.encode("utf8") if isinstance(value, unicode) else str(value)
 			valstr_len=len(val_str)
 			if self.expand_columns_checked and (valstr_len>30 or '\n' in val_str):
 				cell.set_property('text', val_str.replace("\n","\\n").replace("\r","\\r"))
@@ -479,15 +481,15 @@ class UI(object):
 				tgl.connect('toggled',self.addinfo_update)
 				vbox.show()
 				tgl.show()
-				vbox.pack_start(tgl,fill=False,expand=False)
+				vbox.pack_start(tgl, False, False, 0)
 				e=gtk.Entry()
 				if col in previously_set:
 					e.set_text(previously_set[col])
 					e.show()
 				e.connect('changed',self.on_addentry_changed,col)
-				vbox.pack_start(e)
+				vbox.pack_start(e, True, False, 0)
 				self.addbox_items[col]=dict(toggle=tgl,entry=e,container=vbox)
-				self.ui.addbox.pack_start(vbox,fill=False,expand=False)
+				self.ui.addbox.pack_start(vbox, False, False, 0)
 			self.cur_st.is_new=False
 		for col,v in self.addbox_items.items(): v['text']=v['entry'].get_text()
 		self.ui.addbox.show()
@@ -505,7 +507,7 @@ class UI(object):
 
 	def on_dataview_row_activated(self,treeview,path,column):
 		if not self.ui.raw_btn.get_active(): return
-		try: where_cond=self.cur_st.where_cond(path[0],self.dbconn)
+		try: where_cond=self.cur_st.where_cond(path,self.dbconn)
 		except NoKeysError,e: return
 		tbl=self.cur_st.table
 		colname=column.get_title().replace('__','_')
@@ -558,8 +560,8 @@ class UI(object):
 
 	def on_copy_all(self,menuitem):
 		copy_text=self.create_csvdata()
-		self.clipboard.set_text(copy_text)
-		self.clipboard2.set_text(copy_text)
+		self.clipboard.set_text(copy_text, -1)
+		self.clipboard2.set_text(copy_text, -1)
 
 	def on_save_all_activate(self,menuitem):
 		chooser=gtk.FileChooserDialog(action=gtk.FILE_CHOOSER_ACTION_SAVE,buttons=(gtk.STOCK_SAVE,1))
@@ -573,7 +575,7 @@ class UI(object):
 			open(filename,"w").write(copy_text)
 
 	def on_dataview_event_after(self,treeview,ev):
-		if ev.type==gtk.gdk.BUTTON_PRESS and ev.button==3:
+		if ev.type==Gdk.EventType.BUTTON_PRESS and ev.button.button==3:
 			self.selection.update_selection(treeview,ev)
 			if self.selection:
 				self.xref_lbl.set_text(short_str(self.selection.text))
@@ -587,20 +589,18 @@ class UI(object):
 				self.ui.xref.set_sensitive(False)
 				self.ui.xadd.set_sensitive(False)
 
-			#import pdb
-			#pdb.set_trace()
 			oids_active=(self.cur_st.has_oids and len(self.selection.rows)>0)
 			self.ui.menu_del.set_sensitive(oids_active)
 			self.ui.menu_apply.set_sensitive(oids_active)
-			self.ui.dv_menu.popup(None,None,None,ev.button,ev.time)
+			self.ui.dv_menu.popup(None, None, None, None, ev.button.button, ev.time)
 
 	def on_dataview_realize(self,*args):
 		print 'on_dataview_realize:',args
 
 	def on_menu_copy(self,menuitem):
 		if self.selection:
-			self.clipboard.set_text(' '.join(map(str,self.selection.get_cross_select())))
-			self.clipboard2.set_text(' '.join(map(str,self.selection.get_cross_select())))
+			self.clipboard.set_text(' '.join(map(str,self.selection.get_cross_select())), -1)
+			self.clipboard2.set_text(' '.join(map(str,self.selection.get_cross_select())), -1)
 	def on_menu_del(self,menuitem):
 		if self.selection.rows:
 			self.ui.sqlquery.set_text('delete from %s where OID in (%s)'%(self.cur_st.table,','.join(self.selection.get_cross_select(0))))
@@ -701,7 +701,7 @@ class UI(object):
 					except:
 						print >>sys.stderr,"Failed loading count(*) for %s"%(name)
 				else: count=u"%s\xb1\u03b1"%(int(pg_count),)
-			self.tablestore.append((name,count))
+			self.tablestore.append((name, str(count)))
 			self.add_menu_item(self.xref_menu,self.lbl_idx(idx,name),self.on_xref_activate,name)
 			self.add_menu_item(self.xtbl_menu,self.lbl_idx(idx,name),self.on_xtbl_activate,name)
 
