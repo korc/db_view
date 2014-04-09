@@ -6,7 +6,7 @@ import datetime
 try: mypath=os.path.dirname(__file__)
 except NameError: mypath=os.path.realpath(os.path.dirname(sys.argv[0]))
 
-version=(0,9,0,20110605)
+version=(0,9,0,20140408)
 
 sys.path.append(os.path.join(os.path.dirname(mypath),'lib'))
 sys.path.append(os.path.join(os.path.dirname(mypath),'..','lib'))
@@ -729,10 +729,10 @@ class UI(object):
 		if name:
 			self.load_db(name)
 	def get_password(self, msg):
-		dlg=gtk.Dialog(title=msg, buttons=(gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
+		dlg=gtk.Dialog(title=msg)
 		e=gtk.Entry()
 		e.set_visibility(False)
-		dlg.get_action_area().add(e)
+		dlg.add_action_widget(e, gtk.ResponseType.ACCEPT)
 		e.show()
 		dlg.run()
 		ret=e.get_text()
@@ -748,7 +748,7 @@ class UI(object):
 			try: self.dbconn=sqllib.DBConn(dbname,self.selected_api)
 			except Exception,e:
 				if "password" in str(e):
-					self.dbconn=sqllib.DBConn(dbname+" password="+self.get_password(str(e)),self.selected_api)
+					self.dbconn=sqllib.DBConn(dbname+" password="+self.get_password("%s: %s"%(type(e).__name__, str(e))).replace("\\","\\\\").replace(" ","\\ "),self.selected_api)
 				else: raise
 		except Exception,e:
 			print 'Error loading %r'%(dbname)
