@@ -6,7 +6,7 @@ import datetime
 try: mypath=os.path.dirname(__file__)
 except NameError: mypath=os.path.realpath(os.path.dirname(sys.argv[0]))
 
-version=(0,9,0,20140408)
+version=(0,9,0,20140514)
 
 sys.path.append(os.path.join(os.path.dirname(mypath),'lib'))
 sys.path.append(os.path.join(os.path.dirname(mypath),'..','lib'))
@@ -701,7 +701,7 @@ class UI(object):
 					except:
 						print >>sys.stderr,"Failed loading count(*) for %s"%(name)
 				else: count=u"%s\xb1\u03b1"%(int(pg_count),)
-			self.tablestore.append((name, str(count)))
+			self.tablestore.append((name, unicode(count)))
 			self.add_menu_item(self.xref_menu,self.lbl_idx(idx,name),self.on_xref_activate,name)
 			self.add_menu_item(self.xtbl_menu,self.lbl_idx(idx,name),self.on_xtbl_activate,name)
 
