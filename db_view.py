@@ -806,8 +806,12 @@ class UI(object):
 			self.ui.mainwindow.set_title(os.path.basename(fname))
 	def on_quit(self,*args):
 		gtk.main_quit()
-	def run(self,fname=None):
+	def run(self,fname=None, query=None):
 		if fname is not None: self.load_db(fname)
+		if query:
+			self.ui.sqlquery.set_text(query)
+			self.ui.sqlquery.activate()
+
 		gtk.main()
 		if len(self.sql_history)>0:
 			try: open(os.path.expanduser(os.path.join('~','.dbview_history')),'w').write(''.join(['%s\n'%x[0] for x in self.sql_history][:2000]))
@@ -818,4 +822,5 @@ if __name__=='__main__':
 	fname=None
 	if len(sys.argv)>1: fname=sys.argv[1]
 	if len(sys.argv)>2: ui.select_api(sys.argv[2])
-	ui.run(fname)
+	query=sys.argv[3] if len(sys.argv)>3 else None
+	ui.run(fname, query)
