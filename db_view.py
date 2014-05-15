@@ -357,7 +357,9 @@ class UI(object):
 		
 	def on_refresh(self,btn):
 		self.refresh_view()
+	cells_expanded=False
 	def	on_expand_btn(self,btn):
+		self.cells_expanded=btn.get_active()
 		self.refresh_view()
 
 	def on_col_clicked(self,col,idx):
@@ -396,7 +398,6 @@ class UI(object):
 		else:
 			self.ui.query_lbl.set_text(str(len(stinfo.store)))
 			self.ui.select_combo.set_active_iter(self.add_ifnot(self.sql_select_history,stinfo.sql,80))
-			self.expand_columns_checked=not self.ui.expand_btn.get_active()
 			if stinfo.is_new:
 				for idx,title in enumerate(stinfo.cols):
 					col=gtk.TreeViewColumn(title.replace('_','__'))
@@ -404,23 +405,25 @@ class UI(object):
 					col.pack_start(cell, False)
 					col.set_resizable(True)
 					col.set_clickable(True)
+					cell.set_property("wrap-width", 60 if self.cells_expanded else -1)
 					col.set_cell_data_func(cell,self.render_data,idx)
 					col.connect('clicked',self.on_col_clicked,idx)
 					self.ui.dataview.append_column(col)
 			self.ui.dataview.set_model(stinfo.store)
-			self.ui.dataview.columns_autosize()
+			#self.ui.dataview.columns_autosize()
 			if not stinfo.is_new:
 				self.ui.dataview.scroll_to_point(tree_pos.x,tree_pos.y)
-	def render_data(self,column,cell,model,iter,idx):
-		value=model.get_value(iter,idx)
+	fallback_encodings=["utf8", "sjis", "euc-jp", "latin1"]
+	def render_data(self, column, cell, model, cell_iter, idx):
+		value=model.get_value(cell_iter, idx)
 		if value is not None:
-			val_str=value.encode("utf8") if isinstance(value, unicode) else str(value)
-			valstr_len=len(val_str)
-			if self.expand_columns_checked and (valstr_len>30 or '\n' in val_str):
-				cell.set_property('text', val_str.replace("\n","\\n").replace("\r","\\r"))
-				if cell.get_property("width-chars")<min(30,valstr_len): cell.set_property("width-chars",min(30,valstr_len))
-			else:
-				cell.set_property('text',val_str)
+			try: value=unicode(value)
+			except UnicodeDecodeError:
+				for enc in self.fallback_encodings:
+					try: value=str(value).decode(enc)
+					except UnicodeDecodeError: pass
+					else: break
+			cell.set_property('text',value.replace("\r", u"\u21b5") if self.cells_expanded else value.replace("\r", u"\u240d").replace("\n", u"\u240a"))
 		else:
 			cell.set_property('markup','<span foreground="#808080" size="smaller" style="italic">null</span>')
 	def on_dataview_query_tooltip(self,treeview,x,y,kbd_mode,tooltip):
